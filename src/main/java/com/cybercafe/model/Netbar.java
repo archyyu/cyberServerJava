@@ -2,10 +2,12 @@ package com.cybercafe.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Entity
+@Builder
 @Table(name = "netbar_info")
 public class Netbar {
     

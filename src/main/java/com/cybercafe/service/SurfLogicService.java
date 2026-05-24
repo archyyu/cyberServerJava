@@ -1,16 +1,17 @@
 package com.cybercafe.service;
 
+import com.cybercafe.model.Billing;
 import com.cybercafe.model.DurationPrice;
-import com.cybercafe.model.ExtraPrice;
-import com.cybercafe.model.Machine;
 import com.cybercafe.model.Member;
 import com.cybercafe.model.Netbar;
 import com.cybercafe.model.Online;
 import com.cybercafe.model.PeriodPrice;
 import com.cybercafe.model.WeekPrice;
 import com.cybercafe.model.dto.ResponseDTO;
-import com.cybercafe.model.logic.ActiveData;
-import com.cybercafe.model.logic.SurfUser;
+import com.cybercafe.model.exception.SurfException;
+import com.cybercafe.model.logic.CostPair;
+import com.cybercafe.model.types.OnlineType;
+import com.cybercafe.repository.BillingRepository;
 import com.cybercafe.repository.MemberRepository;
 import com.cybercafe.repository.OnlineRepository;
 
@@ -19,15 +20,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Example;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.AbstractMap.SimpleEntry;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -36,185 +35,65 @@ public class SurfLogicService {
     
     private final MemberRepository memberRepository;
     private final OnlineRepository onlineRepository;
+    private final BillingRepository billingRepository;
     private final RateService rateService;
 
 
-    public ResponseDTO activeUser(ActiveData activeData) {
-        SurfUser surfUser = surfUserMap.get(activeData.getMemberId());
+    public ResponseDTO activeUser(Long memberId, Long areaId, String machineName, Long durationId, Long periodId) {
         
-        if (surfUser == null) {
-            Member member = memberRepository.findById(activeData.getMemberId()).orElse(null);
-            if (member == null) {
-                return ResponseDTO.error(1001, "User not found in DB");
-            }
+        
 
-            surfUser = new SurfUser();
-            surfUser.setMemberId(activeData.getMemberId());
-            surfUser.setPcName(activeData.getPcName());
-            surfUser.setCostType(activeData.getCostType());
-            surfUser.setBaseBalance(member.getBaseBalance() != null ? member.getBaseBalance().floatValue() : 0f);
-            surfUser.setAwardBalance(member.getAwardBalance() != null ? member.getAwardBalance().floatValue() : 0f);
-            
-            // Core Pricing Logic Evaluation
-            long now = System.currentTimeMillis() / 1000;
-            if (activeData.getCostType() == 2) { // 2 = PERIOD
-                PeriodPrice period = this.rateService.findPeriodItem(surfUser.getRuleId());
-                if (period == null || !period.isIn(now, false)) {
-                    return ResponseDTO.error(1002, "Invalid period or not in time");
-                }
-                if (surfUser.remain() < period.getPrice()) {
-                    return ResponseDTO.error(1003, "Insufficient balance for period");
-                }
-                if (!surfUser.getAreaTypeId().equals(period.getAreaId())) {
-                    return ResponseDTO.error(1004, "Invalid area for period");
-                }
-                ExtraPrice extraPrice = this.rateService.findExtraPrice(surfUser.getMemberTypeId(), period.getAreaId());
-                if (extraPrice != null) surfUser.setExtraCharge(extraPrice.getAdditionalPrice());
-
-                surfUser.setRuleValue(period.getPrice());
-                surfUser.setPeriodStartTime(period.getStartTime());
-                surfUser.setPeriodEndTime(period.getEndTime());
-                surfUser.setDurationTime(period.getPeriodTime());
-
-            } else if (activeData.getCostType() == 3) { // 3 = DURATION
-                DurationPrice duration = this.rateService.findDurationItem(surfUser.getRuleId());
-                if (duration == null) {
-                    return ResponseDTO.error(1002, "Invalid duration");
-                }
-                if (surfUser.remain() < duration.getPrice()) {
-                    return ResponseDTO.error(1003, "Insufficient balance for duration");
-                }
-                if (!surfUser.getAreaTypeId().equals(duration.getAreaId())) {
-                    return ResponseDTO.error(1004, "Invalid area for duration");
-                }
-                ExtraPrice extraPrice = this.rateService.findExtraPrice(surfUser.getMemberTypeId(), duration.getAreaId());
-                if (extraPrice != null) surfUser.setExtraCharge(extraPrice.getAdditionalPrice());
-
-                surfUser.setRuleValue(duration.getPrice());
-                surfUser.setDurationTime(duration.getDurationTime());
-            }
-
-            // Register Online Database Session
-            Online onlineRecord = new Online();
-            onlineRecord.setMemberID(surfUser.getMemberId());
-            onlineRecord.setMachineName(surfUser.getPcName());
-            onlineRepository.save(onlineRecord);
-            
-            surfUserMap.put(surfUser.getMemberId(), surfUser);
-
-            // TODO: Publisher component ZeroMQ notifications
-        } else {
-             // standard to period transfer logic
-        }
-
-        return ResponseDTO.success(surfUser);
+        return null;
     }
 
-    
+    public ResponseDTO pcLoginUser(Long memberId, String pcName, String password) {
 
-    public ResponseDTO pcLoginUser(Map<String, Object> map) {
-        Long memberId = Long.parseLong(map.get("memberID").toString());
-        String pcName = map.get("pcName").toString();
-        String password = map.get("pwd").toString();
-        Long loginType = Long.parseLong(map.get("loginType").toString());
 
-        // 1. Verify PC exists
-        Object surfPc = surfPcMap.get(pcName);
-        if (surfPc == null) {
-            return ResponseDTO.error(1005, "PC Not Found");
-        }
-
-        // 2. Lookup User
-        SurfUser surfUser = surfUserMap.get(memberId);
-        if (surfUser == null) {
-            if (billingRate.getNeedActive() != null && billingRate.getNeedActive() == 0) {
-                // Auto login user logic
-                ActiveData dummyActive = new ActiveData();
-                dummyActive.setMemberId(memberId);
-                dummyActive.setPcName(pcName);
-                ResponseDTO activeResp = activeUser(dummyActive);
-                if (activeResp.getStatus() == 0) {
-                    surfUser = (SurfUser) activeResp.getData();
-                }
-            }
-            
-            if (surfUser == null) {
-                return ResponseDTO.error(1006, "User not active or does not exist");
-            }
-        }
-
-        // 3. Password Verification
-        if (loginType == 1) { // 1 = WX login
-             // WeChat MD5 logic verification here
-        } else {
-            if (!password.equals(surfUser.getPassword())) {
-                return ResponseDTO.error(1007, "Invalid Password");
-            }
-        }
-
-        // 4. Check repeat login
-        if (pcName.equals(surfUser.getPcName())) {
-            return ResponseDTO.success(surfUser);
-        }
-
-        // 5. Existing user on PC kick-off
-        // If surfPc has a user mapped, log them off first
-        // TODO: map the PC User logic closely once SurfPc POJO is mapped
-
-        // 6. Cost Type Logic (Week Pricing override upon logon)
-        long now = System.currentTimeMillis() / 1000;
-        if (surfUser.getCostType() == 1) { // 1 = WEEK
-            WeekPrice weekPrice = this.rateService.findWeekItem(surfUser.getMemberTypeId(), surfUser.getAreaTypeId());
-            if (weekPrice != null) {
-                weekPrice.resetSurfUser(surfUser, surfUser.getAreaTypeId(), now);
-            }
-            
-            // 7. DB Save
-            Online onlineRecord = onlineRepository.findByMemberIDAndOffLineTimeIsNull(surfUser.getMemberId());
-            if (onlineRecord != null) {
-                onlineRecord.setMachineName(pcName);
-                onlineRepository.save(onlineRecord);
-            }
-            surfUserMap.put(surfUser.getMemberId(), surfUser);
-        }
-
-        surfUser.setPcName(pcName);
-
-        // TODO: Publish ZeroMQ LOGON event
-        return ResponseDTO.success(surfUser);
+        return null;
     }
 
     public ResponseDTO logOffUser(Long memberID, boolean isFromCashier, boolean force, boolean isNoteClient) {
-        SurfUser surfUser = surfUserMap.get(memberID);
-        if (surfUser == null) {
-            return ResponseDTO.error(1006, "User not active");
+        
+        return null;
+    }
+
+    @Transactional
+    public void userLogOff(Long memberId) {
+
+
+
+    }
+
+    public Online getOnlineByMember(Member member) {
+
+        Online online = Online.builder().memberID(member.getMemberId()).build();
+        return this.onlineRepository.findOne(Example.of(online)).orElse(null);
+
+    }
+
+    public Online generateOnline(Member member, WeekPrice weekPrice) {
+        Online online = this.getOnlineByMember(member);
+        if (online != null) {
+            return online;
         }
+        
+        online = Online.builder().memberID(member.getMemberId())
+                                        .ruleID(weekPrice.getRuleId())
+                                        .onlineActiveTime(this.timestampToLocalDateTime(System.currentTimeMillis() / 1000))
+                                        .ignoreTime(null)
+                                        .build();
 
-        if (!isFromCashier && surfUser.getMemberTypeId() == 0 && surfUser.getTempBalance() > 0) {
-            return ResponseDTO.error(1008, "Temporary user cannot log off with balance");
-        }
+        this.onlineRepository.save(online);
+        return online;
 
-        // Clear PC mapped data
-        Object surfPc = surfPcMap.get(surfUser.getPcName());
-        if (surfPc != null) {
-            // surfPc.setLpSurfUser(null);
-            // surfPc.setPcHeartTime(0);
-        }
+    }
 
-        surfUserMap.remove(memberID);
-        surfUser.setLogonTimestamp(System.currentTimeMillis() / 1000);
+    public void generateOnline(Member member, DurationPrice durationPrice) {
 
-        // Update DB
-        Online onlineRecord = onlineRepository.findByMemberIDAndOffLineTimeIsNull(memberID);
-        if (onlineRecord != null) {
-            onlineRecord.setOffLineTime(java.time.LocalDateTime.now());
-            onlineRepository.save(onlineRecord);
-        }
+    }
 
-        surfUser.setPcName("");
+    public void generateOnline(Member member, PeriodPrice periodPrice) {
 
-        // TODO: Publish ZeroMQ LOGOFF event
-        return ResponseDTO.success(surfUser);
     }
 
     public ResponseDTO queryOnlineUserList() {
@@ -294,61 +173,184 @@ public class SurfLogicService {
     }
 
 
-    private float getHourPrice(WeekPrice weekPrice, long timestamp) {
+    private int getHourPrice(WeekPrice weekPrice, long timestamp) {
+        if (weekPrice == null) {
+            return 0;
+        }
+
+
 
         return 0;
     }
 
-    @Transactional
-    public void cost(Netbar netbar, SimpleEntry<Online, Member> entry, long timestamp) {
+    public int calculateMaxOnlineTime() {
+        return 0;
+    }
 
-        Online online = entry.getKey();
-        Member member = entry.getValue();
+    
 
-        log.info("Handling User Cost Deduction for user {}", member.getMemberId());
+    public int calculateOnlineTimeByCost(float hourRate, int cost) {
+
+        int secondsByHour = 60 * 60;
+        return (int)((cost / hourRate) * secondsByHour);
+
+    }
+
+    private SimpleEntry<Integer, Integer> calculateTheCostAndOnlineTime(Online online, Member member, WeekPrice weekPrice, Long timestamp) {
+        int cost = 0;
+        int lastSeconds = 0;
+        if (online.getIgnoreTime().intValue() < weekPrice.getIgnoreTime()) {
+            // firstly should check the ignore time, in that case, cost 0 and online time lasts the ignore time
+            online.setIgnoreTime(weekPrice.getIgnoreTime().intValue());
+            cost = 0;
+            lastSeconds = online.getIgnoreTime();
+        } else {
+
+            // if has processed the ignore time or the ignore time is 0, calculate how much should charge the user
+            if (online.getStartCost().intValue() < weekPrice.getStartPrice()) {
+                online.setStartCost(weekPrice.getStartPrice());
+                cost = online.getStartPrice();
+            } else {
+                cost = Math.min(member.balance(), weekPrice.getMinCostPrice());
+            }
+
+            // Hourly price based on current timestamp
+            int hourPrice = this.getHourPrice(weekPrice, timestamp);
+            if (hourPrice <= 0) {
+                log.warn("HourPrice resolved to 0 for user {} – skipping", member.getMemberId());
+                
+            }
+            lastSeconds = this.calculateOnlineTimeByCost(hourPrice, cost);
+        }
+        return new SimpleEntry<Integer, Integer>(cost, lastSeconds);
+    }
+
+
+    public void updateOnlineCost(Online online, CostPair costPair, long timestamp, int lastSeconds) {
+
+        online.setAllHadCost(online.getAllHadCost() + costPair.all());
+        online.setAllCostBase(online.getAllCostBase() + costPair.costBase());
+        online.setAllCostAward(online.getAllCostAward() + costPair.costAward());
+        online.setAllCostCash(online.getAllCostCash() + costPair.costCash());
+        online.setLastCostTimestamp(Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        online.setNextCostTimestamp(Instant.ofEpochSecond(timestamp + lastSeconds).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        this.onlineRepository.save(online);
+
+    }
+
+    private LocalDateTime timestampToLocalDateTime(long timestamp) {
+        return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
+
+    public void generateTheBilling(Online online, CostPair costPair, long timestamp, int lastSeconds) {
+
+        Billing billing = Billing.builder().gid(online.getGid())
+                                    .memberID(online.getMemberID())
+                                    .onlineID(online.getOnlineID())
+                                    .ruleType(online.getRuleType())
+                                    .ruleId(online.getRuleID())
+                                    .currentCostBase(costPair.costBase())
+                                    .currentCostAward(costPair.costAward())
+                                    .currentCostTemp(costPair.costCash())
+                                    .currentCostTimestamp(this.timestampToLocalDateTime(timestamp))
+                                    .build();
         
-        // Resolve weekly pricing rule
-        WeekPrice weekPrice = this.rateService.findWeekItem(member.getMemberType(), online.getAreaID());
+        this.billingRepository.save(billing);
+
+    }
+
+
+
+    public CostPair deductMemberBalance(Netbar netbar, Member member, int cost) {
+        // Apply billing ratios (base and award)
+        int baseCost = cost * (netbar.getRatioBase() / (netbar.getRatioAward() + netbar.getRatioBase()));
+        int awardCost = cost - baseCost;
+        // Deduct from balances, allowing award to cover deficits
+        int remainBase = member.getBaseBalance() - baseCost;
+        int remainAward = member.getAwardBalance() - awardCost;
+        
+        //TODO if base or award is not enough
+        
+        member.setBaseBalance(remainBase);
+        member.setAwardBalance(remainAward);
+
+        this.memberRepository.save(member);
+
+        return new CostPair(baseCost, awardCost, 0);
+
+    }
+
+    //calculate how much should charge the member,
+    @Transactional
+    public void cost(Netbar netbar, SimpleEntry<Online, Member> entry, long timestamp) { 
+        
+    }
+
+    public void costByPeriod(Netbar netbar, Online online, Member member, PeriodPrice periodPrice, long timestamp) throws SurfException {
+        if (member.balance() < periodPrice.getPrice()) {
+            throw new SurfException("low balance");
+        }
+
+        if (periodPrice.isIn(timestamp) == false) {
+            throw new SurfException("not in the period time");
+        }
+
+        int cost = periodPrice.getPrice();
+        int lastSeconds = periodPrice.secondsToGo(timestamp);
+
+        online.setRuleType(OnlineType.DURATION.typeId());
+        online.setRuleID(periodPrice.getRuleId());
+        this.deductMember(netbar, online, member, cost, lastSeconds, timestamp);
+    }
+
+    public void costByDuration(Netbar netbar, Online online, Member member, DurationPrice durationPrice, long timestamp) throws SurfException {
+
+        if (member.balance() < durationPrice.getPrice()) {
+            throw new SurfException("low balance");
+        }
+
+        int cost = durationPrice.getPrice();
+        int lastSeconds = durationPrice.getDurationTime().intValue();
+
+        online.setRuleType(OnlineType.DURATION.typeId());
+        online.setRuleID(durationPrice.getRuleId());
+        this.deductMember(netbar, online, member, cost, lastSeconds, timestamp);
+
+    }
+
+    public void costByWeek(Netbar netbar, Online online, Member member, WeekPrice weekPrice, long timestamp) {
+
         if (weekPrice == null) {
             log.warn("WeekPrice not found for user {} – skipping cost", member.getMemberId());
             return;
         }
-        // Hourly price based on current timestamp
-        float hourPrice = this.getHourPrice(weekPrice, timestamp);
-        if (hourPrice <= 0) {
-            log.warn("HourPrice resolved to 0 for user {} – skipping", member.getMemberId());
-            return;
-        }
-        // Apply billing ratios (base and award)
-        double baseCost = hourPrice * netbar.getRatioBase();
-        double awardCost = hourPrice * netbar.getRatioAward();
-        // Deduct from balances, allowing award to cover deficits
-        double remainBase = member.getBaseBalance() - baseCost;
-        double remainAward = member.getAwardBalance() - awardCost;
-        if (remainBase < 0) {
-            double deficit = -remainBase;
-            if (remainAward >= deficit) {
-                remainAward -= deficit;
-                remainBase = 0;
-            } else {
-                // Not enough funds – log off user
-                log.info("User {} ran out of funds during weekly charge", member.getMemberId());
-                logOffUser(member.getMemberId(), false, true, true);
-                return;
-            }
-        }
-        
-        member.setBaseBalance(remainBase);
-        member.setAwardBalance(remainAward);
-        
-        // Update next cost timestamp (next hour)
-        online.setNextCostTimestamp(Instant.ofEpochSecond(timestamp + 3600).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        
-        // Persist changes to DB (online record timestamp optional)         
-        onlineRepository.save(online); 
 
-        log.info("Deducted weekly cost for user {}: base {} award {}", member.getMemberId(), baseCost, awardCost);
+        int lastSeconds = 0;
+        int cost = 0;
+
+        SimpleEntry<Integer, Integer> costAndLastSeconds = this.calculateTheCostAndOnlineTime(online, member, weekPrice, timestamp);
+    
+        cost = costAndLastSeconds.getKey();
+        lastSeconds = costAndLastSeconds.getValue();
+        
+        online.setRuleType(OnlineType.WEEK.typeId());
+        online.setRuleID(weekPrice.getRuleId());
+        this.deductMember(netbar, online, member, cost, lastSeconds, timestamp);
 
     }
+
+    private void deductMember(Netbar netbar, Online online, Member member, int cost, int lastSeconds, long timestamp) {
+
+        log.info("Handling User Cost Deduction for user {}", member.getMemberId());
+        CostPair costPair = this.deductMemberBalance(netbar, member, cost);
+
+        this.updateOnlineCost(online, costPair, timestamp, lastSeconds);
+        this.generateTheBilling(online, costPair, timestamp, lastSeconds);
+
+        log.info("Deducted weekly cost for user {}: base {} award {}", member.getMemberId(), costPair.costBase(), costPair.costAward());
+
+    }
+
+
 
 }

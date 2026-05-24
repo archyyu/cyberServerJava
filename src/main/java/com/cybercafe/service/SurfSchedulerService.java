@@ -32,8 +32,7 @@ public class SurfSchedulerService {
     
     public List<Online> getOnlineList(Long gid) {
 
-        Online online = new Online();
-        online.setGid(gid);
+        Online online = Online.builder().gid(gid).build();
         List<Online> onlineList = this.onlineRepository.findAll(Example.of(online));
         return onlineList;
 

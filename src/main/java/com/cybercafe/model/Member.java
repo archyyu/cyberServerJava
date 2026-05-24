@@ -3,10 +3,12 @@ package com.cybercafe.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Entity
+@Builder
 @Table(name = "netbar_member")
 public class Member {
     @Id
@@ -29,11 +31,17 @@ public class Member {
     private Integer cityID;
     private Integer districtID;
     private String address;
-    private Double baseBalance;
-    private Double awardBalance;
+    private Integer baseBalance;
+    private Integer awardBalance;
+    private Integer cashBalance;
     private Integer shopId;
     private Integer onlineState;
     private String onlineArea;
     private String onlineMachine;
     private String lastUpdateDate;
+
+    public int balance() {
+        return this.baseBalance + this.awardBalance + this.cashBalance;
+    }
+
 }

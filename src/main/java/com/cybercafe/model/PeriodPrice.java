@@ -19,13 +19,13 @@ public class PeriodPrice {
     private Long memberType;
     private Float startTime;
     private Float endTime;
-    private Float price;
+    private Integer price;
     private Long periodTime;
     private Long byType;
     private Long typeFlag;
 
-    public boolean isIn(long now, boolean isSmart) {
-        double beginTime = isSmart ? startTime : (startTime - 0.2);
+    public boolean isIn(long now) {
+        double beginTime = startTime;
         float nowTime = timestampToFormat(now);
 
         if (startTime < endTime) {
@@ -33,6 +33,10 @@ public class PeriodPrice {
         } else {
             return beginTime < nowTime || nowTime < endTime;
         }
+    }
+
+    public int secondsToGo(long now) {
+        return 11;
     }
 
     private float timestampToFormat(long curTime) {

@@ -14,5 +14,5 @@ public class DurationPrice {
     private Long areaId;
     private Long memberType;
     private Long durationTime;
-    private Float price;
+    private Integer price;
 }
