@@ -16,6 +16,6 @@ public class WeekPrice {
     private Long memberType;
     private Long ignoreTime;
     private Float startPrice;
-    private Float minCostPrice;
+    private Integer minCostPrice;
     private String price;
 }

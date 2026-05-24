@@ -28,10 +28,6 @@ public class SurfHttpController {
 
         try {
             switch (request.getFn()) {
-                case "activeUser":
-                    return surfLogicService.activeUser(map);
-                case "logonUser":
-                    return surfLogicService.pcLoginUser(map);
                 case "logoffUser":
                     Long memberID = Long.parseLong(map.get("memberID").toString());
                     return surfLogicService.logOffUser(memberID, request.isFromCashier(), false, true);
