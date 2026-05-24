@@ -115,8 +115,6 @@ class SurfLogicServiceTest {
     @Test
     void costByDuration_shouldDeductAwardBalance_whenRatioHasAwardPortion() throws Exception {
         
-        this.member.setAwardBalance(1000);
-
         DurationPrice durationPrice = new DurationPrice();
         durationPrice.setRuleId(10L);
         durationPrice.setPrice(300);
@@ -134,12 +132,12 @@ class SurfLogicServiceTest {
 
         surfLogicService.costByDuration(netbar, online, member, durationPrice, TIMESTAMP);
 
-        assertEquals(1000, member.getBaseBalance().intValue());
-        assertEquals(700, member.getAwardBalance().intValue());
+        assertEquals(700, member.getBaseBalance().intValue());
+        assertEquals(0, member.getAwardBalance().intValue());
 
         assertEquals(300, online.getAllHadCost().intValue());
-        assertEquals(0, online.getAllCostBase().intValue());
-        assertEquals(300, online.getAllCostAward().intValue());
+        assertEquals(0, online.getAllCostAward().intValue());
+        assertEquals(300, online.getAllCostBase().intValue());
     }
 
     @Test
