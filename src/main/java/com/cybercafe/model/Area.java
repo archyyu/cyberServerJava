@@ -13,4 +13,5 @@ public class Area {
     private Long areaId;
     private String areaName ;
     private Integer roomType ;
+    private Long gid;
 }
