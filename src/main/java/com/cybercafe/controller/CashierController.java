@@ -24,7 +24,7 @@ public class CashierController extends BaseController {
 
     @PostMapping("/members/activate")
     public ResponseEntity<Online> activateMember(@RequestBody ActiveUserRequest request) throws Exception {
-        Online online = surfLogicService.activeUser(
+        Online online = surfLogicService.activateUser(
             request.gid(), request.memberId(), request.areaId(),
             request.machineName(), request.durationId(), request.periodId());
         return ResponseEntity.ok(online);
@@ -32,7 +32,7 @@ public class CashierController extends BaseController {
 
     @PostMapping("/members/login")
     public ResponseEntity<Online> loginMember(@RequestBody PcLoginRequest request) throws Exception {
-        Online online = surfLogicService.pcLoginUser(
+        Online online = surfLogicService.memberLoginMachine(
             request.gid(), request.memberId(), request.pcName(), request.password());
         return ResponseEntity.ok(online);
     }

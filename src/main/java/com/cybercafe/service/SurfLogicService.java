@@ -47,7 +47,7 @@ public class SurfLogicService {
     private final TimeService timeService;
 
 
-    public Online activeUser(Long gid, Long memberId, Long areaId, String machineName, Long durationId, Long periodId)
+    public Online activateUser(Long gid, Long memberId, Long areaId, String machineName, Long durationId, Long periodId)
         throws SurfException {
         
         Member member = this.memberService.findMember(gid, memberId).orElseThrow(() -> new SurfException("member is not exists"));
@@ -57,22 +57,22 @@ public class SurfLogicService {
             throw new SurfException("only active once");
         }
 
-        online = Online.builder().gid(gid).memberID(memberId).onlineActiveTime(this.timeService.nowLocalDateTime())    
+        online = Online.builder().gid(gid).memberId(memberId).onlineActiveTime(this.timeService.nowLocalDateTime())    
                 .build();
         
         if (durationId != null) {
             DurationPrice durationPrice = this.rateService.findDurationItem(durationId).orElseThrow(() -> new SurfException("not"));
-            return this.memberActive(member, online, durationPrice);
+            return this.activateMember(member, online, durationPrice);
         } else if (periodId != null) {
             PeriodPrice periodPrice = this.rateService.findPeriodItem(periodId).orElseThrow(() -> new SurfException("not"));
-            return this.memberActive(member, online, periodPrice);
+            return this.activateMember(member, online, periodPrice);
         } else {
-            return this.memberActive(member, online);
+            return this.activateMember(member, online);
         }
 
     }
 
-    public Online pcLoginUser(Long gid, Long memberId, String pcName, String password) throws SurfException {
+    public Online memberLoginMachine(Long gid, Long memberId, String pcName, String password) throws SurfException {
 
         Netbar netbar = this.netbarRepository.findById(gid).orElseThrow(() -> new SurfException("gid is incorrect"));
         Online online = this.findOnlineByMember(gid, memberId).orElseThrow(() -> new SurfException("the member is not actived yet"));
@@ -99,25 +99,25 @@ public class SurfLogicService {
     }
 
     private boolean memberHasLogin(Online online) {
-        return online.getMachineID() != null;
+        return online.getMachineId() != null;
     }
 
-    private Online memberActive(Member member, Online online) {
+    private Online activateMember(Member member, Online online) {
         online.setRuleType(OnlineType.WEEK.typeId());
         this.onlineRepository.save(online);
         return online;
     }
 
-    private Online memberActive(Member member, Online online, PeriodPrice periodPrice) {
+    private Online activateMember(Member member, Online online, PeriodPrice periodPrice) {
         online.setRuleType(OnlineType.PERIOD.typeId());
-        online.setRuleID(periodPrice.getRuleId());
+        online.setRuleId(periodPrice.getRuleId());
         this.onlineRepository.save(online);
         return online;
     }
 
-    private Online memberActive(Member member, Online online, DurationPrice durationPrice) {
+    private Online activateMember(Member member, Online online, DurationPrice durationPrice) {
         online.setRuleType(OnlineType.DURATION.typeId());
-        online.setRuleID(durationPrice.getRuleId());
+        online.setRuleId(durationPrice.getRuleId());
         this.onlineRepository.save(online);
         return online;
     }
@@ -139,7 +139,7 @@ public class SurfLogicService {
     }
 
     private Online memberLoginByPeriod(Netbar netbar, Member member, Online online, Machine machine) throws SurfException{
-        PeriodPrice periodPrice = this.rateService.findPeriodItem(online.getRuleID()).orElseThrow(
+        PeriodPrice periodPrice = this.rateService.findPeriodItem(online.getRuleId()).orElseThrow(
             () -> new SurfException("could not find the period")
         );
 
@@ -159,7 +159,7 @@ public class SurfLogicService {
     }
 
     private Online memberLoginByDuration(Netbar netbar, Member member, Online online, Machine machine) throws SurfException{
-        DurationPrice durationPrice = this.rateService.findDurationItem(online.getRuleID()).orElseThrow(
+        DurationPrice durationPrice = this.rateService.findDurationItem(online.getRuleId()).orElseThrow(
             () -> new SurfException("could not find the duration")
         );
 
@@ -184,7 +184,7 @@ public class SurfLogicService {
 
     private void changeOnlineMachine(Online online, Machine machine) {
 
-        online.setMachineID(machine.getMachineID());
+        online.setMachineId(machine.getMachineID());
         online.setMachineName(machine.getMachineName());
         this.onlineRepository.save(online);
 
@@ -194,14 +194,14 @@ public class SurfLogicService {
     private void updateOnlineMachine(Online online, Machine machine) {
         
         online.setOnlineStartTime(this.timeService.nowLocalDateTime());
-        online.setMachineID(machine.getMachineID());
+        online.setMachineId(machine.getMachineID());
         online.setMachineName(machine.getMachineName());
         this.onlineRepository.save(online);
 
     }
 
     private Optional<Online> findOnlineByMember(long gid, long memberId) {
-        return this.onlineRepository.findOne(Example.of(Online.builder().gid(gid).memberID(memberId).build()));
+        return this.onlineRepository.findOne(Example.of(Online.builder().gid(gid).memberId(memberId).build()));
     }
 
     private void checkPcOccupiedOrNot(long gid, String pcName) throws SurfException {
@@ -211,7 +211,7 @@ public class SurfLogicService {
         }
     }
 
-    public void logOffUser(Long gid, Long memberID, boolean isFromCashier, boolean force, boolean isNoteClient) {
+    public void logOffUser(Long gid, Long memberId, boolean isFromCashier, boolean force, boolean isNoteClient) {
         
     }
 
@@ -224,7 +224,7 @@ public class SurfLogicService {
 
     public Online getOnlineByMember(Member member) {
 
-        Online online = Online.builder().memberID(member.getMemberId()).build();
+        Online online = Online.builder().memberId(member.getMemberId()).build();
         return this.onlineRepository.findOne(Example.of(online)).orElse(null);
 
     }
@@ -237,14 +237,14 @@ public class SurfLogicService {
     public void stopAllUserCost() {
     }
 
-    public void pcHeart(Long memberID, String pcName, String pcIp, String pcMac) {
+    public void pcHeart(Long memberId, String pcName, String pcIp, String pcMac) {
     }
 
-    public Object queryUser(Long memberID) {
+    public Object queryUser(Long memberId) {
         return "User info";
     }
 
-    public void changePc(Long memberID, String pcName, Long areaId) {
+    public void changePc(Long memberId, String pcName, Long areaId) {
     }
 
     public void weekToPeriodOrDuration(Map<String, Object> map) {
@@ -292,7 +292,7 @@ public class SurfLogicService {
     public void submitDutyData(Map<String, Object> map) {
     }
 
-    public void updatePwd(Long memberID, String newPwd) {
+    public void updatePwd(Long memberId, String newPwd) {
     }
 
 
@@ -319,7 +319,7 @@ public class SurfLogicService {
 
     }
 
-    private SimpleEntry<Integer, Integer> calculateTheCostAndOnlineTime(Online online, Member member, WeekPrice weekPrice, Long timestamp) {
+    private SimpleEntry<Integer, Integer> calculateCostAndTime(Online online, Member member, WeekPrice weekPrice, Long timestamp) {
         int cost = 0;
         int lastSeconds = 0;
         if (online.getIgnoreTime().intValue() < weekPrice.getIgnoreTime()) {
@@ -365,13 +365,13 @@ public class SurfLogicService {
         return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
-    public void generateTheBilling(Online online, CostPair costPair, long timestamp, int lastSeconds) {
+    public void generateBilling(Online online, CostPair costPair, long timestamp, int lastSeconds) {
 
         Billing billing = Billing.builder().gid(online.getGid())
-                                    .memberID(online.getMemberID())
-                                    .onlineID(online.getOnlineID())
+                                    .memberID(online.getMemberId())
+                                    .onlineID(online.getOnlineId())
                                     .ruleType(online.getRuleType())
-                                    .ruleId(online.getRuleID())
+                                    .ruleId(online.getRuleId())
                                     .currentCostBase(costPair.costBase())
                                     .currentCostAward(costPair.costAward())
                                     .currentCostTemp(costPair.costCash())
@@ -426,7 +426,7 @@ public class SurfLogicService {
         int lastSeconds = periodPrice.secondsToGo(timestamp);
 
         online.setRuleType(OnlineType.DURATION.typeId());
-        online.setRuleID(periodPrice.getRuleId());
+        online.setRuleId(periodPrice.getRuleId());
         this.deductMember(netbar, online, member, cost, lastSeconds, timestamp);
     }
 
@@ -440,7 +440,7 @@ public class SurfLogicService {
         int lastSeconds = durationPrice.getDurationTime().intValue();
 
         online.setRuleType(OnlineType.DURATION.typeId());
-        online.setRuleID(durationPrice.getRuleId());
+        online.setRuleId(durationPrice.getRuleId());
         this.deductMember(netbar, online, member, cost, lastSeconds, timestamp);
 
     }
@@ -455,13 +455,13 @@ public class SurfLogicService {
         int lastSeconds = 0;
         int cost = 0;
 
-        SimpleEntry<Integer, Integer> costAndLastSeconds = this.calculateTheCostAndOnlineTime(online, member, weekPrice, timestamp);
+        SimpleEntry<Integer, Integer> costAndLastSeconds = this.calculateCostAndTime(online, member, weekPrice, timestamp);
     
         cost = costAndLastSeconds.getKey();
         lastSeconds = costAndLastSeconds.getValue();
         
         online.setRuleType(OnlineType.WEEK.typeId());
-        online.setRuleID(weekPrice.getRuleId());
+        online.setRuleId(weekPrice.getRuleId());
         this.deductMember(netbar, online, member, cost, lastSeconds, timestamp);
 
     }
@@ -472,7 +472,7 @@ public class SurfLogicService {
         CostPair costPair = this.deductMemberBalance(netbar, member, cost);
 
         this.updateOnlineCost(online, costPair, timestamp, lastSeconds);
-        this.generateTheBilling(online, costPair, timestamp, lastSeconds);
+        this.generateBilling(online, costPair, timestamp, lastSeconds);
 
         log.info("Deducted weekly cost for user {}: base {} award {}", member.getMemberId(), costPair.costBase(), costPair.costAward());
 

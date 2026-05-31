@@ -74,8 +74,8 @@ class SurfLogicServiceTest {
         durationPrice.setDurationTime(3600L);
 
         Online online = Online.builder()
-                .onlineID(100L)
-                .memberID(1L)
+                .onlineId(100L)
+                .memberId(1L)
                 .gid(1L)
                 .build();
         online.setAllHadCost(0);
@@ -86,7 +86,7 @@ class SurfLogicServiceTest {
         surfLogicService.costByDuration(netbar, online, member, durationPrice, TIMESTAMP);
 
         assertEquals(OnlineType.DURATION.typeId(), online.getRuleType());
-        assertEquals(10L, online.getRuleID());
+        assertEquals(10L, online.getRuleId());
 
         assertEquals(500, member.getBaseBalance().intValue());
         assertEquals(0, member.getAwardBalance().intValue());
@@ -102,7 +102,7 @@ class SurfLogicServiceTest {
         verify(billingRepository).save(billingCaptor.capture());
 
         Billing savedBilling = billingCaptor.getValue();
-        assertEquals(online.getOnlineID(), savedBilling.getOnlineID());
+        assertEquals(online.getOnlineId(), savedBilling.getOnlineID());
         assertEquals(member.getMemberId(), savedBilling.getMemberID());
         assertEquals(durationPrice.getRuleId(), savedBilling.getRuleId());
         assertEquals(OnlineType.DURATION.typeId(), savedBilling.getRuleType());
@@ -121,8 +121,8 @@ class SurfLogicServiceTest {
         durationPrice.setDurationTime(1800L);
 
         Online online = Online.builder()
-                .onlineID(100L)
-                .memberID(1L)
+                .onlineId(100L)
+                .memberId(1L)
                 .gid(1L)
                 .build();
         online.setAllHadCost(0);
@@ -148,8 +148,8 @@ class SurfLogicServiceTest {
         durationPrice.setDurationTime(3600L);
 
         Online online = Online.builder()
-                .onlineID(100L)
-                .memberID(1L)
+                .onlineId(100L)
+                .memberId(1L)
                 .gid(1L)
                 .build();
         online.setAllHadCost(0);
