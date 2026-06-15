@@ -14,13 +14,13 @@ import java.time.LocalDateTime;
 @Table(name = "netbar_online")
 public class Online {
     @Id
-    private Long onlineID;
-    private Long memberID;
-    private Long machineID;
+    private Long onlineId;
+    private Long memberId;
+    private Long machineId;
     private String machineName;
-    private Long areaID;
+    private Long areaId;
     private Integer ruleType;
-    private Long ruleID;
+    private Long ruleId;
     private String areaName;
     private Integer tariffType;
     private LocalDateTime onlineActiveTime;
@@ -28,7 +28,7 @@ public class Online {
     private LocalDateTime offLineTime;
     private Integer internetTime;
     private Double onlineFee;
-    private Long onlineRoomID;
+    private Long onlineRoomId;
     private Long gid;
 
     private LocalDateTime startTime;

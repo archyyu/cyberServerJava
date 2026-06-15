@@ -57,7 +57,7 @@ public class SurfSchedulerService {
     public void netbarTick(Netbar netbar) {
 
         List<Online> onlineList = this.getOnlineList(netbar.getGid());
-        List<Member> memberList = this.getMemberList(onlineList.stream().map( item -> {return item.getMemberID();}).toList());
+        List<Member> memberList = this.getMemberList(onlineList.stream().map( item -> {return item.getMemberId();}).toList());
 
         long timestamp = System.currentTimeMillis();
         

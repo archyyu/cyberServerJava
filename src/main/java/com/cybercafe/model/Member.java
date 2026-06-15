@@ -26,7 +26,7 @@ public class Member {
     private String certificateNum;
     private Long memberType;
     private Integer lastUpdate;
-    private Integer gid;
+    private Long gid;
     private Byte proviceID;
     private Integer cityID;
     private Integer districtID;

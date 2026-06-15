@@ -15,6 +15,7 @@ import com.cybercafe.repository.WeekPriceRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Optional;
 
 
 
@@ -27,24 +28,20 @@ public class RateService {
     private final ExtraPriceRepository extraPriceRepository;
     private final PeriodPriceRepository periodPriceRepository;
 
-    public PeriodPrice findPeriodItem(Long ruleId) {
-        return this.periodPriceRepository.findById(ruleId).orElse(null);
+    public Optional<PeriodPrice> findPeriodItem(Long ruleId) {
+        return this.periodPriceRepository.findById(ruleId);
     }
 
-    public DurationPrice findDurationItem(Long ruleId) {
-        return this.durationPriceRepository.findById(ruleId).orElse(null);
+    public Optional<DurationPrice> findDurationItem(Long ruleId) {
+        return this.durationPriceRepository.findById(ruleId);
     }
 
-    public WeekPrice findWeekItem(Long memberType, Long areaId) {
+    public Optional<WeekPrice> findWeekItem(Long memberType, Long areaId) {
         WeekPrice weekPrice = new WeekPrice();
         weekPrice.setMemberType(memberType);
         weekPrice.setAreaId(areaId);
         Example<WeekPrice> example = Example.of(weekPrice); 
-        List<WeekPrice> list = this.weekPriceRepository.findAll(example);
-        if (list != null && !list.isEmpty()) {
-            return list.get(0);
-        }
-        return null;
+        return this.weekPriceRepository.findOne(example);
     }
 
     public ExtraPrice findExtraPrice(Long memberType, Long areaId) {
